@@ -1,0 +1,113 @@
+import numpy as np
+from scipy.io import wavfile
+from scipy.fft import rfft, rfftfreq
+
+f1 = 1
+f2 = 5
+
+wavFrecuency = []
+wavBinario = []
+num_bits = 0
+BIT_DURATION = 1
+
+# ---------------- FRECUENCIAS ----------------
+#-------------En caso de demodular la señal y recibir la señal cuadrada
+def wav_demodulation():
+    print("Decodificacion con señal cuadrada")
+    fs, data = wavfile.read('MensajeCuadrada.wav')
+    data = data / np.max(np.abs(data))
+    reff = (np.max(data)+np.min(data))/2
+    
+    N = int(BIT_DURATION * fs)
+    num_bits = len(data) // N
+
+    for i in range(num_bits):
+        inicio = i * N
+        fin = inicio + N
+        segment = data[inicio:fin]
+
+        cruces = 0
+
+        for j in range(1, len(segment)):
+            if np.sign(segment[j-1]-reff) != np.sign(segment[j]-reff):
+                cruces += 1
+
+        # 2 cruces = 1 periodo
+        periodos = cruces / 2
+
+        T = BIT_DURATION / periodos 
+        fm = 1 / T 
+        wavFrecuency.append(fm)
+            
+
+            
+#-------------En caso de no demodular la señal en el GNU (senosoidales)
+def wav_frecuency():
+    global wavFrecuency, num_bits
+
+    fs, data = wavfile.read('Mensaje.wav')
+
+    # Mono
+    if len(data.shape) > 1:
+        data = data.mean(axis=1)
+
+    # Normalización
+    data = data / np.max(np.abs(data))
+
+    N = int(BIT_DURATION * fs)
+
+    num_bits = len(data) // N
+
+    for i in range(num_bits):
+        inicio = i * N
+        fin = inicio + N
+        segment = data[inicio:fin]
+
+        X = np.abs(rfft(segment))
+        freqs = rfftfreq(N, 1/fs)
+
+        peak_freq = freqs[np.argmax(X)]
+        wavFrecuency.append(peak_freq)
+
+# ---------------- BINARIOS ----------------
+def wav_binarios():
+    global wavBinario
+
+    for f in wavFrecuency:
+        if abs(f - f1) < abs(f - f2):
+            wavBinario.append(1)
+        else:
+            wavBinario.append(0)
+
+# ---------------- DECODIFICADOR ----------------
+def decodificador(Byteletra):
+    potencia = 1
+    dec = 0
+
+    for i in range(7, -1, -1):
+        dec += Byteletra[i] * potencia
+        potencia *= 2
+
+    return chr(dec)
+
+# ---------------- MENSAJE ----------------
+def SendCharacter():
+    mensaje = ""
+
+    for i in range(0, len(wavBinario), 8):
+        byte = wavBinario[i:i+8]
+
+        if len(byte) == 8:
+            mensaje += decodificador(byte)
+
+    return mensaje
+
+# ---------------- MAIN ----------------
+#wav_frecuency() #-> la señal sin demodular
+wav_demodulation() #-> La señal modulada (cuadrada)
+wav_binarios()
+
+
+
+mensaje = SendCharacter()
+print("Mensaje:", mensaje)
