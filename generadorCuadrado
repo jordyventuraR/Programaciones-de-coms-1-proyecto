@@ -1,0 +1,70 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.io.wavfile import write
+
+def codificador():
+    mensaje = input("ingrese su mensaje: ")
+    mensaje_dec = []
+    mensaje_bytes = [ ]
+    mensaje_bin_frecuency = [ ]
+
+    f1 = 1 #
+    f2 = 5 #
+
+    for i in mensaje:
+        dec = ord(i)
+        mensaje_dec.append(dec)
+        binario =  format(ord(i), '08b')
+        mensaje_bytes.append(binario)
+
+    '''for i in mensaje_bytes:
+        print(i)  '''
+
+    '''for i in mensaje_bytes:
+        for j in i:
+            print(j)'''
+
+    for byte in mensaje_bytes:
+        for bit in byte:
+            if(bit =='1'):
+                mensaje_bin_frecuency.append(f1)
+            else:
+                mensaje_bin_frecuency.append(f2)
+
+    '''for i in mensaje_bin_frecuency:
+        print(i)'''
+    return mensaje_bin_frecuency
+
+def signal_generator(mensaje_bin_frecuency):
+    j = 0
+    fs = 44100
+    to = 0 
+    tb = 1
+    t_total=[]
+    y_total=[]
+    
+    for f in mensaje_bin_frecuency:
+        t = np.arange(to, to+tb, 1/fs)
+        y = (np.sign(np.cos(2*np.pi*f*t)) + 1) / 2
+        
+        to += tb
+        
+        t_total.append(t)
+        y_total.append(y)
+        
+        # unir todo en una sola señal
+    t_total = np.concatenate(t_total)
+    y_total = np.concatenate(y_total)
+    
+    
+    audio = y_total / np.max(np.abs(y_total))  # normalizar [-1, 1]
+    audio_int16 = np.int16(audio * 32767)
+
+    write("MensajeCuadrada.wav", fs, audio_int16)
+
+    plt.plot(t_total, y_total)
+    plt.xlim(0, 21)
+    plt.show()
+    
+frecuencias = codificador()
+signal_generator(frecuencias)
